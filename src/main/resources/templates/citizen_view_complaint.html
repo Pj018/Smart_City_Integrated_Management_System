@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>View Complaint - Smart City</title>
+    <!-- Add Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background-color: #1a252f;
+            color: white;
+            padding-top: 20px;
+        }
+
+        .sidebar a {
+            color: #ecf0f1;
+            text-decoration: none;
+            padding: 15px;
+            display: block;
+            border-bottom: 1px solid #2c3e50;
+        }
+
+        .sidebar a:hover {
+            background-color: #2c3e50;
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+    <div class="d-flex">
+        <!-- Sidebar -->
+        <div class="sidebar col-md-2 d-none d-md-block">
+            <h4 class="text-center mb-4">Smart City</h4>
+            <a href="/citizen/dashboard"><i class="bi bi-house-door"></i> Dashboard</a>
+            <a href="/citizen/complaint/new"><i class="bi bi-plus-circle"></i> Raise Complaint</a>
+            <form th:action="@{/logout}" method="post" class="mt-auto p-3">
+                <button class="btn btn-danger w-100" type="submit"><i class="bi bi-box-arrow-right"></i> Logout</button>
+            </form>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-10 p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Complaint Details #<span th:text="${complaint.id}"></span></h2>
+                <a href="/citizen/dashboard" class="btn btn-secondary shadow-sm"><i class="bi bi-arrow-left"></i> Back
+                    to Dashboard</a>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-8">
+                    <!-- Complaint Description Card -->
+                    <div class="card shadow-sm mb-4 border-0">
+                        <div class="card-header bg-white fw-bold border-bottom-0 pt-4 pb-2">
+                            <h4 class="mb-0 text-primary" th:text="${complaint.title}">Complaint Title</h4>
+                        </div>
+                        <div class="card-body pt-0">
+                            <p class="text-muted"><i class="bi bi-geo-alt-fill text-danger"></i> Location Coordinates:
+                                <span
+                                    th:text="${complaint.latitude != null ? complaint.latitude + ', ' + complaint.longitude : 'Not provided'}">Address</span>
+                            </p>
+
+                            <h6 class="fw-bold fs-5 mt-4">Description:</h6>
+                            <p class="bg-light p-3 rounded border fs-6"
+                                style="min-height: 100px; white-space: pre-wrap;" th:text="${complaint.description}">
+                            </p>
+
+                            <div th:if="${complaint.imagePath}" class="mt-4">
+                                <h6 class="fw-bold fs-5"><i class="bi bi-image"></i> Uploaded Evidence:</h6>
+                                <img th:src="${complaint.imagePath}" class="img-fluid rounded border mt-2"
+                                    alt="Evidence"
+                                    style="max-height: 400px; width: 100%; object-fit: contain; background: #f8f9fa;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Updates/Remarks Card -->
+                    <div class="card shadow-sm border-0 border-start border-5 border-info">
+                        <div class="card-header bg-white border-0 pt-4">
+                            <h5 class="fw-bold text-info mb-0"><i class="bi bi-chat-left-text"></i> Official Remarks &
+                                Updates</h5>
+                        </div>
+                        <div class="card-body">
+                            <div th:if="${not #strings.isEmpty(complaint.workNotes)}"
+                                class="alert alert-info border-0 mb-0">
+                                <p class="mb-0 fs-6" th:text="${complaint.workNotes}" style="white-space: pre-wrap;">
+                                </p>
+                            </div>
+                            <p th:unless="${not #strings.isEmpty(complaint.workNotes)}"
+                                class="text-muted mb-0 fst-italic"><i class="bi bi-hourglass-split"></i> No official
+                                remarks have been added yet.</p>
+
+                            <!-- Resolution Image Proof -->
+                            <div th:if="${complaint.resolutionImagePath}" class="mt-4">
+                                <h6 class="fw-bold text-success border-top pt-3"><i class="bi bi-check-circle-fill"></i>
+                                    Resolution Proof:</h6>
+                                <img th:src="${complaint.resolutionImagePath}"
+                                    class="img-fluid rounded border border-success mt-2" alt="Resolution Image"
+                                    style="max-height: 400px; width: 100%; object-fit: contain; background: #f8f9fa;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <!-- Status Card -->
+                    <div class="card shadow-sm mb-4 border-0">
+                        <div class="card-header bg-dark text-white fw-bold">
+                            Current Status
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                    <span class="text-muted">Department</span>
+                                    <span class="badge bg-secondary fs-6" th:text="${complaint.department}"></span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                    <span class="text-muted">Status</span>
+                                    <span th:if="${complaint.status.name() == 'PENDING'}"
+                                        class="badge bg-warning text-dark fs-6"
+                                        style="box-shadow: 0px 4px 6px rgba(0,0,0,0.1);">Pending</span>
+                                    <span th:if="${complaint.status.name() == 'IN_PROGRESS'}"
+                                        class="badge bg-primary fs-6"
+                                        style="box-shadow: 0px 4px 6px rgba(0,0,0,0.1);">In Progress</span>
+                                    <span th:if="${complaint.status.name() == 'COMPLETED'}"
+                                        class="badge bg-success fs-6"
+                                        style="box-shadow: 0px 4px 6px rgba(0,0,0,0.1);">Completed</span>
+                                    <span th:if="${complaint.status.name() == 'WITHDRAWN'}" class="badge bg-dark fs-6"
+                                        style="box-shadow: 0px 4px 6px rgba(0,0,0,0.1);">Withdrawn</span>
+                                </li>
+                                <li class="list-group-item d-flex flex-column px-0 pb-1">
+                                    <span class="text-muted mb-1 text-uppercase"
+                                        style="font-size: 0.8rem; letter-spacing: 0.05em;">Submitted On</span>
+                                    <span class="fw-bold"
+                                        th:text="${#temporals.format(complaint.createdDate, 'dd MMM yyyy, hh:mm a')}"></span>
+                                </li>
+                                <li class="list-group-item d-flex flex-column px-0 pb-1"
+                                    th:if="${complaint.resolvedDate}">
+                                    <span class="text-success fw-bold text-uppercase"
+                                        style="font-size: 0.8rem; letter-spacing: 0.05em;">Resolved On</span>
+                                    <span class="text-success fw-bold"
+                                        th:text="${#temporals.format(complaint.resolvedDate, 'dd MMM yyyy, hh:mm a')}"></span>
+                                </li>
+                            </ul>
+
+                            <!-- Withdraw Action -->
+                            <div th:if="${complaint.status.name() == 'PENDING'}" class="mt-4 pt-3 border-top">
+                                <form th:action="@{/citizen/complaint/{id}/withdraw(id=${complaint.id})}" method="post"
+                                    onsubmit="return confirm('Are you sure you want to withdraw this complaint? It will be marked as cancelled and cannot be reopened.');">
+                                    <button type="submit" class="btn btn-outline-danger w-100 shadow-sm">
+                                        <i class="bi bi-x-circle me-1"></i> Withdraw / Cancel Complaint
+                                    </button>
+                                </form>
+                                <small class="text-muted d-block mt-2 text-center" style="font-size: 0.8rem;">Note: Once
+                                    cancelled, the city staff will stop processing your request.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

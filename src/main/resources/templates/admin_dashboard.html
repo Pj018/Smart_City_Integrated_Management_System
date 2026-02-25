@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard - Smart City Control Center</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background-color: #343a40;
+            color: white;
+            padding-top: 20px;
+        }
+
+        .sidebar a {
+            color: #ecf0f1;
+            text-decoration: none;
+            padding: 15px;
+            display: block;
+            border-bottom: 1px solid #495057;
+        }
+
+        .sidebar a:hover {
+            background-color: #495057;
+        }
+
+        .card-stat {
+            border-radius: 12px;
+            transition: transform 0.2s;
+        }
+
+        .card-stat:hover {
+            transform: translateY(-5px);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="d-flex">
+        <!-- Admin Sidebar -->
+        <div class="sidebar col-md-2 d-none d-md-block">
+            <h5 class="text-center mb-4 text-warning"><i class="bi bi-shield-lock-fill"></i> Control Center</h5>
+            <a href="#complaints-section"><i class="bi bi-list-columns"></i> All Complaints</a>
+            <a href="#users-section"><i class="bi bi-people"></i> Manage Users</a>
+            <a href="#" data-bs-toggle="modal" data-bs-target="#broadcastModal"><i class="bi bi-broadcast"></i>
+                Broadcast</a>
+            <form th:action="@{/logout}" method="post" class="mt-auto p-3">
+                <button class="btn btn-outline-danger w-100" type="submit"><i class="bi bi-box-arrow-right"></i>
+                    Logout</button>
+            </form>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-10 p-4 bg-light">
+            <h2 class="mb-4">Admin Dashboard Overview</h2>
+
+            <div th:if="${param.assigned}" class="alert alert-success mt-2">Complaint successfully assigned to staff.
+            </div>
+            <div th:if="${param.markedFake}" class="alert alert-warning mt-2">Complaint marked as Fake. Points deducted
+                from citizen.</div>
+            <div th:if="${param.broadcastSent}" class="alert alert-success mt-2">Broadcast notification sent to all
+                users.</div>
+            <div th:if="${param.statusUpdated}" class="alert alert-info mt-2">User account status updated.</div>
+
+            <!-- System Stats -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card card-stat bg-primary text-white shadow">
+                        <div class="card-body">
+                            <h5 class="card-title">Total Complaints</h5>
+                            <h2 class="card-text fw-bold" th:text="${complaints.size()}">0</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card card-stat bg-warning text-dark shadow">
+                        <div class="card-body">
+                            <h5 class="card-title">Tracking Pending</h5>
+                            <h2 class="card-text fw-bold" th:text="${pendingCount}">0</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card card-stat bg-success text-white shadow">
+                        <div class="card-body">
+                            <h5 class="card-title">Resolved</h5>
+                            <h2 class="card-text fw-bold" th:text="${resolvedCount}">0</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Predictive Analystics Dashboard Note -->
+            <div class="alert alert-info shadow-sm d-flex align-items-center">
+                <i class="bi bi-lightbulb-fill text-warning fs-3 me-3"></i>
+                <div>
+                    <strong>Predictive System Alert:</strong> <span th:text="${predictiveAlert}"></span>
+                </div>
+            </div>
+
+            <!-- Master Complaints List -->
+            <div class="card shadow mb-5" id="complaints-section">
+                <div class="card-header bg-dark text-white fw-bold d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-file-earmark-bar-graph"></i> Master Complaints Monitor</span>
+                </div>
+                <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead class="table-secondary sticky-top">
+                            <tr>
+                                <th>ID</th>
+                                <th>Info</th>
+                                <th>Dept & Priority</th>
+                                <th>Assigned To</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="c : ${complaints}">
+                                <td th:text=" '#' + ${c.id}"></td>
+                                <td>
+                                    <strong><span th:text="${c.title}"></span></strong><br>
+                                    <small class="text-muted">By: <span th:text="${c.citizen.name}"></span></small><br>
+                                    <span class="badge"
+                                        th:classappend="${c.status.name() == 'COMPLETED' ? 'bg-success' : (c.status.name() == 'IN_PROGRESS' ? 'bg-primary' : 'bg-warning')} "
+                                        th:text="${c.status}"></span>
+                                    <span th:if="${c.fakeFlag}" class="badge bg-danger ms-1">FAKE</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-dark" th:text="${c.department}"></span>
+                                    <span class="badge bg-light text-dark" th:text="${c.priority}"></span>
+                                </td>
+                                <td>
+                                    <span th:if="${c.staff != null}" th:text="${c.staff.name}"
+                                        class="text-success fw-bold"></span>
+                                    <span th:if="${c.staff == null}" class="text-danger">Unassigned</span>
+                                </td>
+                                <td>
+                                    <!-- Assign Form. Only show if not complete and not fake -->
+                                    <div th:if="${c.status.name() != 'COMPLETED' && !c.fakeFlag}">
+                                        <form th:action="@{/admin/complaint/assign}" method="post" class="d-flex gx-1">
+                                            <input type="hidden" name="complaintId" th:value="${c.id}">
+                                            <select name="staffId" class="form-select form-select-sm w-auto me-1"
+                                                required>
+                                                <option value="" disabled selected>Select Staff</option>
+                                                <option th:each="staff : ${staffMembers}" th:value="${staff.id}"
+                                                    th:text="${staff.name}"></option>
+                                            </select>
+                                            <button type="submit" class="btn btn-sm btn-outline-success">Assign</button>
+                                        </form>
+                                    </div>
+
+                                    <form th:if="${!c.fakeFlag && c.status.name() != 'COMPLETED'}"
+                                        th:action="@{/admin/complaint/mark-fake}" method="post" class="mt-1">
+                                        <input type="hidden" name="complaintId" th:value="${c.id}">
+                                        <button type="submit" class="btn btn-sm btn-danger w-100"
+                                            onclick="return confirm('Are you sure you want to mark this as FAKE and penalize the user (-5 pts)?')">Mark
+                                            Fake</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- User Management -->
+            <div class="card shadow mb-4" id="users-section">
+                <div class="card-header bg-dark text-white fw-bold">Manage Users</div>
+                <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Points</th>
+                                <th>Status Account</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="u : ${users}">
+                                <td th:text="${u.name}"></td>
+                                <td th:text="${u.email}"></td>
+                                <td>
+                                    <span class="badge bg-info text-dark" th:text="${u.role}"></span>
+                                </td>
+                                <td class="fw-bold" th:text="${u.points}"></td>
+                                <td>
+                                    <form th:action="@{/admin/users/toggle-status}" method="post">
+                                        <input type="hidden" name="userId" th:value="${u.id}">
+                                        <button type="submit" class="btn btn-sm text-white w-100"
+                                            th:classappend="${u.active ? 'btn-danger' : 'btn-success'}"
+                                            th:text="${u.active ? 'Deactivate' : 'Activate'}"></button>
+                                    </form>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Broadcast Modal -->
+    <div class="modal fade" id="broadcastModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-broadcast"></i> Send Global Broadcast</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form th:action="@{/admin/broadcast}" method="post">
+                    <div class="modal-body">
+                        <div class="alert alert-info">Push a notification to all registered Citizens and Staff members
+                            instantly.</div>
+                        <textarea name="message" class="form-control" rows="4" required
+                            placeholder="Type your broadcast message here..."></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary">Send to All <i
+                                class="bi bi-send-fill"></i></button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
