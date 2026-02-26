@@ -6,6 +6,11 @@
     <title>Citizen Dashboard - Smart City</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+    <!-- Leaflet CSS for Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
     <style>
         .sidebar {
             min-height: 100vh;
@@ -86,13 +91,47 @@
                 </div>
                 <div class="col-md-8">
                     <div class="card mb-3 shadow">
-                        <div class="card-header bg-warning text-dark fw-bold">Recent Notifications</div>
-                        <ul class="list-group list-group-flush" style="max-height: 100px; overflow-y: auto;">
-                            <li class="list-group-item" th:each="n : ${notifications}"
-                                th:text="${n.message + ' (' + #temporals.format(n.timestamp, 'dd-MMM HH:mm') + ')'}">
+                        <div
+                            class="card-header bg-warning text-dark fw-bold d-flex justify-content-between align-items-center">
+                            <span>Recent Notifications</span>
+                            <form th:if="${not #lists.isEmpty(notifications)}" action="/citizen/notifications/read-all"
+                                method="post" class="m-0">
+                                <button type="submit" class="btn btn-sm btn-outline-dark" style="font-size: 0.75rem;"><i
+                                        class="bi bi-check2-all"></i> Mark All Read</button>
+                            </form>
+                        </div>
+                        <ul class="list-group list-group-flush" style="max-height: 120px; overflow-y: auto;">
+                            <!-- Show Unread items boldly -->
+                            <li class="list-group-item d-flex justify-content-between align-items-center"
+                                th:each="n : ${notifications}" th:if="${!n.read}">
+                                <span>
+                                    <i class="bi bi-bell-fill text-danger me-2"></i>
+                                    <span class="fw-bold text-dark" th:text="${n.message}"></span>
+                                    <small class="text-muted ms-2"
+                                        th:text="${'(' + #temporals.format(n.timestamp, 'dd-MMM HH:mm') + ')'}"></small>
+                                </span>
+                                <form th:action="@{/citizen/notifications/read/{id}(id=${n.id})}" method="post"
+                                    class="m-0">
+                                    <button type="submit" class="btn btn-sm btn-light text-success"
+                                        title="Mark as read"><i class="bi bi-check-circle"></i></button>
+                                </form>
                             </li>
-                            <li class="list-group-item text-muted" th:if="${#lists.isEmpty(notifications)}">No new
-                                notifications.</li>
+
+                            <!-- Show Read items faded and struck through -->
+                            <li class="list-group-item d-flex justify-content-between align-items-center bg-light"
+                                th:each="n : ${notifications}" th:if="${n.read}">
+                                <span>
+                                    <i class="bi bi-bell text-secondary me-2"></i>
+                                    <span class="text-secondary text-decoration-line-through"
+                                        th:text="${n.message}"></span>
+                                    <small class="text-muted ms-2"
+                                        th:text="${'(' + #temporals.format(n.timestamp, 'dd-MMM HH:mm') + ')'}"></small>
+                                </span>
+                            </li>
+
+                            <li class="list-group-item text-muted" th:if="${#lists.isEmpty(notifications)}">
+                                <i class="bi bi-info-circle me-1"></i> No new notifications.
+                            </li>
                         </ul>
                     </div>
                 </div>
@@ -101,8 +140,31 @@
             <!-- Complaints Table -->
             <div class="card shadow">
                 <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
-                    <span>My Complaints</span>
-                    <a href="/citizen/complaint/new" class="btn btn-sm btn-success">New Complaint</a>
+                    <span><i class="bi bi-list-ul"></i> My Complaints</span>
+                    <div class="d-flex gap-2">
+                        <form action="/citizen/dashboard" method="get" class="d-flex align-items-center gap-2">
+                            <div class="input-group input-group-sm mb-0">
+                                <input type="text" name="keyword" class="form-control" placeholder="Search by title..."
+                                    th:value="${currentKeyword}">
+                                <button class="btn btn-outline-secondary" type="submit"><i
+                                        class="bi bi-search"></i></button>
+                            </div>
+                            <select name="filterStatus" class="form-select form-select-sm" style="width: 150px;"
+                                onchange="this.form.submit()">
+                                <option value="ALL" th:selected="${currentStatusFilter == 'ALL'}">All Statuses</option>
+                                <option value="PENDING" th:selected="${currentStatusFilter == 'PENDING'}">Pending
+                                </option>
+                                <option value="IN_PROGRESS" th:selected="${currentStatusFilter == 'IN_PROGRESS'}">In
+                                    Progress</option>
+                                <option value="COMPLETED" th:selected="${currentStatusFilter == 'COMPLETED'}">Completed
+                                </option>
+                                <option value="WITHDRAWN" th:selected="${currentStatusFilter == 'WITHDRAWN'}">Withdrawn
+                                </option>
+                            </select>
+                        </form>
+                        <a href="/citizen/complaint/new" class="btn btn-sm btn-success"><i class="bi bi-plus-lg"></i>
+                            New Complaint</a>
+                    </div>
                 </div>
                 <div class="card-body">
                     <table class="table table-hover">
@@ -142,9 +204,48 @@
                             </tr>
                         </tbody>
                     </table>
-                    <!-- Pagination can go here (basic implementation) -->
+                    <!-- Pagination Controls -->
+                    <div th:if="${totalPages > 1}" class="d-flex justify-content-center mt-3">
+                        <nav aria-label="Complaint page navigation">
+                            <ul class="pagination pagination-sm mb-0">
+                                <!-- Previous Button -->
+                                <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
+                                    <a class="page-link"
+                                        th:href="@{/citizen/dashboard(page=${currentPage - 1}, filterStatus=${currentStatusFilter}, keyword=${currentKeyword})}">Previous</a>
+                                </li>
+
+                                <!-- Page Numbers -->
+                                <li class="page-item" th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
+                                    th:classappend="${currentPage == i} ? 'active'">
+                                    <a class="page-link"
+                                        th:href="@{/citizen/dashboard(page=${i}, filterStatus=${currentStatusFilter}, keyword=${currentKeyword})}"
+                                        th:text="${i + 1}"></a>
+                                </li>
+
+                                <!-- Next Button -->
+                                <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled'">
+                                    <a class="page-link"
+                                        th:href="@{/citizen/dashboard(page=${currentPage + 1}, filterStatus=${currentStatusFilter}, keyword=${currentKeyword})}">Next</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
                 </div>
             </div>
+
+            <!-- Interactive Map Section -->
+            <div class="card shadow mt-4 mb-4">
+                <div class="card-header bg-dark text-white fw-bold">
+                    <i class="bi bi-geo-alt-fill text-danger me-2"></i> My Complaint Locations
+                </div>
+                <div class="card-body p-0">
+                    <!-- Map Container -->
+                    <div id="complaintsMap"
+                        style="height: 400px; width: 100%; border-bottom-left-radius: 0.375rem; border-bottom-right-radius: 0.375rem;">
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -210,6 +311,70 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Leaflet JS for Maps -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <script th:inline="javascript">
+        // 1. Initialize the map (Center default on India/Smart City area if no points)
+        var map = L.map('complaintsMap').setView([20.5937, 78.9629], 5);
+
+        // 2. Load and attach the OpenStreetMap tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // 3. Inject complaints data from Thymeleaf to JavaScript securely
+        var complaintsData = [
+            /*[# th:each="c : ${complaints.content}"]*/
+            {
+                id: /*[[${c.id}]]*/ 0,
+                title: /*[[${c.title}]]*/ '',
+                latitude: /*[[${c.latitude}]]*/ null,
+                longitude: /*[[${c.longitude}]]*/ null,
+                status: /*[[${c.status.name()}]]*/ ''
+            },
+            /*[/]*/
+        ];
+
+        // 4. Create an array to hold all marker coordinates to auto-zoom the map
+        var markers = [];
+
+        // 5. Loop through each complaint and drop a pin if latitude/longitude exist
+        complaintsData.forEach(function (c) {
+            if (c.latitude && c.longitude) {
+                // Determine pin color based on status (Leaflet uses standard blue icons by default, but we can customize popup html)
+                var statusColor = c.status === 'COMPLETED' ? 'green' : (c.status === 'PENDING' ? 'orange' : 'blue');
+                var statusBadge = `<span style="color: ${statusColor}; font-weight: bold;">${c.status}</span>`;
+
+                // Create Marker
+                var marker = L.marker([c.latitude, c.longitude]).addTo(map);
+
+                // Build interactive popup text
+                var popupContent = `
+                    <div style="min-width: 150px;">
+                        <strong>Complaint #${c.id}</strong><br>
+                        <em>${c.title}</em><br>
+                        Status: ${statusBadge}<br>
+                        <a href="/citizen/complaint/${c.id}" class="mt-2 d-inline-block" style="text-decoration: underline;">View Details</a>
+                    </div>
+                `;
+                marker.bindPopup(popupContent);
+
+                // Store coords to calculate bounding box later
+                markers.push([c.latitude, c.longitude]);
+            }
+        });
+
+        // 6. Auto-zoom the map natively to fit exactly where the complaint markers are
+        if (markers.length > 0) {
+            map.fitBounds(markers, { padding: [50, 50] });
+        } else if (markers.length === 1) {
+            map.setZoom(13); // Closer zoom if only 1 complaint
+        }
+    </script>
 </body>
 
 </html>

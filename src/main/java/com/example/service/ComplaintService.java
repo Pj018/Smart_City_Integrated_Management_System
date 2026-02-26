@@ -39,8 +39,20 @@ public class ComplaintService {
         return saved;
     }
 
-    public Page<Complaint> getComplaintsByCitizen(User citizen, int page, int size) {
+    public Page<Complaint> getComplaintsByCitizen(User citizen, ComplaintStatus status, String keyword, int page,
+            int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdDate").descending());
+
+        boolean hasKeyword = keyword != null && !keyword.trim().isEmpty();
+
+        if (status != null && hasKeyword) {
+            return complaintRepository.searchByCitizenAndStatusAndKeyword(citizen, status, keyword.trim(), pageable);
+        } else if (status != null) {
+            return complaintRepository.findByCitizenAndStatus(citizen, status, pageable);
+        } else if (hasKeyword) {
+            return complaintRepository.searchByCitizenAndKeyword(citizen, keyword.trim(), pageable);
+        }
+
         return complaintRepository.findByCitizen(citizen, pageable);
     }
 
@@ -116,7 +128,7 @@ public class ComplaintService {
                 && complaint.getStatus() == ComplaintStatus.PENDING) {
             complaint.setStatus(ComplaintStatus.WITHDRAWN);
             complaintRepository.save(complaint);
-            notificationService.sendNotification(citizen,
+            notificationService.sendNotification(complaint.getCitizen(),
                     "You have successfully withdrawn your complaint: '" + complaint.getTitle() + "'.");
             return true;
         }
@@ -142,5 +154,20 @@ public class ComplaintService {
 
             performanceReportRepository.save(report);
         }
+    }
+
+    public boolean submitFeedback(Long complaintId, User citizen, Integer rating, String feedback) {
+        Complaint complaint = getComplaintById(complaintId);
+        if (complaint.getCitizen().getId().equals(citizen.getId())
+                && complaint.getStatus() == ComplaintStatus.COMPLETED
+                && complaint.getRating() == null) {
+            complaint.setRating(rating);
+            complaint.setFeedback(feedback);
+            complaintRepository.save(complaint);
+            notificationService.sendNotification(citizen,
+                    "Thank you for your feedback on complaint: '" + complaint.getTitle() + "'.");
+            return true;
+        }
+        return false;
     }
 }

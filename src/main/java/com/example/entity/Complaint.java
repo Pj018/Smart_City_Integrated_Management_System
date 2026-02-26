@@ -63,6 +63,12 @@ public class Complaint {
     @Column(length = 500)
     private String resolutionImagePath;
 
+    @Column(name = "rating")
+    private Integer rating;
+
+    @Column(length = 1000)
+    private String feedback;
+
     @PrePersist
     public void prePersist() {
         this.createdDate = LocalDateTime.now();

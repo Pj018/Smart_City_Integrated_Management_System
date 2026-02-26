@@ -26,6 +26,33 @@
         .sidebar a:hover {
             background-color: #2c3e50;
         }
+
+        /* Star Rating CSS Trick */
+        .star-rating {
+            direction: rtl;
+            display: inline-block;
+        }
+
+        .star-rating input[type=radio] {
+            display: none;
+        }
+
+        .star-rating label {
+            color: #ddd;
+            font-size: 2rem;
+            padding: 0 5px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .star-rating input[type=radio]:checked~label {
+            color: #ffc107;
+        }
+
+        .star-rating label:hover,
+        .star-rating label:hover~label {
+            color: #ffc107;
+        }
     </style>
 </head>
 
@@ -47,6 +74,16 @@
                 <h2>Complaint Details #<span th:text="${complaint.id}"></span></h2>
                 <a href="/citizen/dashboard" class="btn btn-secondary shadow-sm"><i class="bi bi-arrow-left"></i> Back
                     to Dashboard</a>
+            </div>
+
+            <!-- Alerts -->
+            <div th:if="${param.feedbackSuccess}" class="alert alert-success alert-dismissible fade show shadow-sm">
+                Feedback submitted successfully! Thank you.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            <div th:if="${param.feedbackError}" class="alert alert-danger alert-dismissible fade show shadow-sm">
+                Failed to submit feedback. Please try again.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
 
             <div class="row g-4">
@@ -99,6 +136,61 @@
                                 <img th:src="${complaint.resolutionImagePath}"
                                     class="img-fluid rounded border border-success mt-2" alt="Resolution Image"
                                     style="max-height: 400px; width: 100%; object-fit: contain; background: #f8f9fa;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rating / Feedback Card (Only for Completed Status) -->
+                    <div th:if="${complaint.status.name() == 'COMPLETED'}"
+                        class="card shadow-sm border-0 border-start border-5 border-warning mt-4">
+                        <div class="card-header bg-white border-0 pt-4">
+                            <h5 class="fw-bold text-warning mb-0"><i class="bi bi-star-fill"></i> Feedback & Rating</h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- If Feedback already submitted -->
+                            <div th:if="${complaint.rating != null}">
+                                <div class="mb-3 d-flex align-items-center">
+                                    <span class="me-2 fw-bold text-muted">Rating:</span>
+                                    <span th:each="i : ${#numbers.sequence(1, 5)}">
+                                        <i class="bi bi-star-fill fs-5"
+                                            th:classappend="${i <= complaint.rating ? 'text-warning' : 'text-secondary opacity-25'}"></i>
+                                    </span>
+                                    <span class="ms-2 fw-bold" th:text="${complaint.rating} + '/5'"></span>
+                                </div>
+                                <div th:if="${not #strings.isEmpty(complaint.feedback)}">
+                                    <h6 class="fw-bold mb-2">Your Comment:</h6>
+                                    <p class="mb-0 bg-light p-3 rounded text-muted border"
+                                        th:text="${complaint.feedback}"></p>
+                                </div>
+                            </div>
+
+                            <!-- If Feedback not yet submitted -->
+                            <div th:unless="${complaint.rating != null}">
+                                <form th:action="@{/citizen/complaint/{id}/feedback(id=${complaint.id})}" method="post">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Rate your resolution experience:</label><br>
+                                        <div class="star-rating">
+                                            <input type="radio" id="star5" name="rating" value="5" required />
+                                            <label for="star5" title="5 stars"><i class="bi bi-star-fill"></i></label>
+                                            <input type="radio" id="star4" name="rating" value="4" />
+                                            <label for="star4" title="4 stars"><i class="bi bi-star-fill"></i></label>
+                                            <input type="radio" id="star3" name="rating" value="3" />
+                                            <label for="star3" title="3 stars"><i class="bi bi-star-fill"></i></label>
+                                            <input type="radio" id="star2" name="rating" value="2" />
+                                            <label for="star2" title="2 stars"><i class="bi bi-star-fill"></i></label>
+                                            <input type="radio" id="star1" name="rating" value="1" />
+                                            <label for="star1" title="1 star"><i class="bi bi-star-fill"></i></label>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Leave a comment (Optional):</label>
+                                        <textarea class="form-control" name="feedback" rows="3"
+                                            placeholder="Tell us how we did..."></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-warning shadow-sm"><i
+                                            class="bi bi-send-fill text-dark"></i> <span
+                                            class="text-dark fw-bold">Submit Feedback</span></button>
+                                </form>
                             </div>
                         </div>
                     </div>

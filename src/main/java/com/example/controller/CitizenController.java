@@ -1,6 +1,7 @@
 package com.example.controller;
 
 import com.example.entity.Complaint;
+import com.example.entity.ComplaintStatus;
 import com.example.entity.Department;
 import com.example.entity.User;
 import com.example.security.CustomUserDetails;
@@ -40,14 +41,30 @@ public class CitizenController {
 
     @GetMapping("/dashboard")
     public String citizenDashboard(@AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam(required = false) String filterStatus,
+            @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "0") int page,
             Model model) {
         User originalCitizen = userDetails.getUser();
         User citizen = userService.findById(originalCitizen.getId());
-        Page<Complaint> complaints = complaintService.getComplaintsByCitizen(citizen, page, 5);
+
+        ComplaintStatus statusEnum = null;
+        if (filterStatus != null && !filterStatus.isEmpty() && !filterStatus.equals("ALL")) {
+            try {
+                statusEnum = ComplaintStatus.valueOf(filterStatus.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                // Ignore invalid status enum input
+            }
+        }
+
+        Page<Complaint> complaints = complaintService.getComplaintsByCitizen(citizen, statusEnum, keyword, page, 5);
 
         model.addAttribute("citizen", citizen);
         model.addAttribute("complaints", complaints);
+        model.addAttribute("currentStatusFilter", filterStatus == null ? "ALL" : filterStatus);
+        model.addAttribute("currentKeyword", keyword != null ? keyword : "");
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", complaints.getTotalPages());
         model.addAttribute("notifications", notificationService.getNotificationsForUser(citizen));
         return "citizen_dashboard";
     }
@@ -97,6 +114,19 @@ public class CitizenController {
         }
     }
 
+    @PostMapping("/notifications/read/{id}")
+    public String markNotificationAsRead(@PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        notificationService.markAsRead(id, userDetails.getUser());
+        return "redirect:/citizen/dashboard";
+    }
+
+    @PostMapping("/notifications/read-all")
+    public String markAllNotificationsAsRead(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        notificationService.markAllAsRead(userDetails.getUser());
+        return "redirect:/citizen/dashboard";
+    }
+
     @GetMapping("/complaint/{id}")
     public String viewComplaint(@PathVariable Long id, @AuthenticationPrincipal CustomUserDetails userDetails,
             Model model) {
@@ -110,10 +140,32 @@ public class CitizenController {
 
     @PostMapping("/complaint/{id}/withdraw")
     public String withdrawComplaint(@PathVariable Long id, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        boolean success = complaintService.withdrawComplaint(id, userDetails.getUser());
-        if (success) {
-            return "redirect:/citizen/dashboard?withdrawSuccess";
+        try {
+            boolean success = complaintService.withdrawComplaint(id, userDetails.getUser());
+            if (success) {
+                return "redirect:/citizen/dashboard?withdrawSuccess";
+            }
+        } catch (Exception e) {
+            System.err.println("Error withdrawing complaint: " + e.getMessage());
+            e.printStackTrace();
         }
         return "redirect:/citizen/dashboard?withdrawError";
+    }
+
+    @PostMapping("/complaint/{id}/feedback")
+    public String submitFeedback(@PathVariable Long id,
+            @RequestParam Integer rating,
+            @RequestParam(required = false) String feedback,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        try {
+            boolean success = complaintService.submitFeedback(id, userDetails.getUser(), rating, feedback);
+            if (success) {
+                return "redirect:/citizen/complaint/" + id + "?feedbackSuccess";
+            }
+        } catch (Exception e) {
+            System.err.println("Error submitting feedback: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return "redirect:/citizen/complaint/" + id + "?feedbackError";
     }
 }

@@ -25,4 +25,12 @@ public class NotificationService {
     public List<Notification> getNotificationsForUser(User user) {
         return notificationRepository.findByUserOrderByTimestampDesc(user);
     }
+
+    public void markAsRead(Long notificationId, User user) {
+        notificationRepository.markAsRead(notificationId, user);
+    }
+
+    public void markAllAsRead(User user) {
+        notificationRepository.markAllAsRead(user);
+    }
 }

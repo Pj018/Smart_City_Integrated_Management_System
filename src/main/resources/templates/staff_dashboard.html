@@ -82,6 +82,21 @@
                                     <br><a th:if="${c.imagePath}" th:href="${c.imagePath}" target="_blank"
                                         class="badge bg-secondary text-decoration-none mt-1"><i class="bi bi-image"></i>
                                         View Evidance</a>
+
+                                    <!-- Feedback & Rating Display -->
+                                    <div th:if="${c.rating != null}" class="mt-2 p-2 border border-warning rounded"
+                                        style="background-color: #fffdf5;">
+                                        <div class="mb-1 text-warning" style="font-size: 0.9rem;">
+                                            <span th:each="i : ${#numbers.sequence(1, 5)}">
+                                                <i th:class="${i <= c.rating ? 'bi bi-star-fill' : 'bi bi-star'}"></i>
+                                            </span>
+                                            <strong class="text-dark ms-1" th:text="${c.rating} + '/5'"></strong>
+                                        </div>
+                                        <div th:if="${not #strings.isEmpty(c.feedback)}">
+                                            <small class="text-muted fst-italic"><i class="bi bi-quote"></i><span
+                                                    th:text="${c.feedback}"></span><i class="bi bi-quote"></i></small>
+                                        </div>
+                                    </div>
                                 </td>
                                 <td>
                                     <small>Lat: <span th:text="${c.latitude}"></span></small><br>
