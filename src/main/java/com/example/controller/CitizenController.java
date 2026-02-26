@@ -66,6 +66,12 @@ public class CitizenController {
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", complaints.getTotalPages());
         model.addAttribute("notifications", notificationService.getNotificationsForUser(citizen));
+
+        // Dashboard Stats
+        model.addAttribute("totalComplaints", complaintService.getTotalComplaintsByCitizen(citizen));
+        model.addAttribute("pendingComplaints", complaintService.getPendingComplaintsByCitizen(citizen));
+        model.addAttribute("resolvedComplaints", complaintService.getResolvedComplaintsByCitizen(citizen));
+
         return "citizen_dashboard";
     }
 
@@ -98,8 +104,24 @@ public class CitizenController {
 
     @PostMapping("/profile/update")
     public String updateProfile(@RequestParam String name, @RequestParam String email,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
-        userService.updateUserProfile(userDetails.getUser().getId(), name, email);
+            @RequestParam(value = "profilePhoto", required = false) MultipartFile profilePhoto,
+            @AuthenticationPrincipal CustomUserDetails userDetails) throws IOException {
+
+        Long userId = userDetails.getUser().getId();
+        userService.updateUserProfile(userId, name, email);
+
+        if (profilePhoto != null && !profilePhoto.isEmpty()) {
+            String fileName = UUID.randomUUID().toString() + "_profile_"
+                    + StringUtils.cleanPath(profilePhoto.getOriginalFilename());
+            Path uploadPath = Paths.get(UPLOAD_DIR);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+            Path filePath = uploadPath.resolve(fileName);
+            Files.copy(profilePhoto.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+            userService.updateUserProfilePhoto(userId, "/uploads/" + fileName);
+        }
+
         return "redirect:/citizen/dashboard?profileSuccess";
     }
 
@@ -112,6 +134,25 @@ public class CitizenController {
         } else {
             return "redirect:/citizen/dashboard?passwordError";
         }
+    }
+
+    @PostMapping("/settings/notifications")
+    public String updateNotificationPreferences(
+            @RequestParam(required = false) boolean emailNotifications,
+            @RequestParam(required = false) boolean smsNotifications,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        userService.updateNotificationPreferences(userDetails.getUser().getId(), emailNotifications, smsNotifications);
+        return "redirect:/citizen/dashboard?settingsSuccess";
+    }
+
+    @PostMapping("/settings/preferences")
+    public String updateThemeAndLanguagePreferences(
+            @RequestParam String themePreference,
+            @RequestParam String languagePreference,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        userService.updateThemeAndLanguagePreferences(userDetails.getUser().getId(), themePreference,
+                languagePreference);
+        return "redirect:/citizen/dashboard?settingsSuccess";
     }
 
     @PostMapping("/notifications/read/{id}")

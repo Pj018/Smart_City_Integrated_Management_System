@@ -56,6 +56,18 @@ public class ComplaintService {
         return complaintRepository.findByCitizen(citizen, pageable);
     }
 
+    public long getTotalComplaintsByCitizen(User citizen) {
+        return complaintRepository.countByCitizen(citizen);
+    }
+
+    public long getPendingComplaintsByCitizen(User citizen) {
+        return complaintRepository.countByCitizenAndStatus(citizen, ComplaintStatus.PENDING);
+    }
+
+    public long getResolvedComplaintsByCitizen(User citizen) {
+        return complaintRepository.countByCitizenAndStatus(citizen, ComplaintStatus.COMPLETED);
+    }
+
     public Page<Complaint> getComplaintsByStaff(User staff, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdDate").descending());
         return complaintRepository.findByStaff(staff, pageable);

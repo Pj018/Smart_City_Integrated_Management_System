@@ -33,4 +33,39 @@ public class User {
 
     @Builder.Default
     private boolean active = true;
+
+    @Column(name = "profile_photo")
+    private String profilePhoto;
+
+    @Column(name = "email_notifications")
+    @Builder.Default
+    private Boolean emailNotifications = true;
+
+    @Column(name = "sms_notifications")
+    @Builder.Default
+    private Boolean smsNotifications = false;
+
+    public Boolean getEmailNotifications() {
+        return emailNotifications != null ? emailNotifications : true;
+    }
+
+    public Boolean getSmsNotifications() {
+        return smsNotifications != null ? smsNotifications : false;
+    }
+
+    @Column(name = "theme_preference")
+    @Builder.Default
+    private String themePreference = "light";
+
+    @Column(name = "language_preference")
+    @Builder.Default
+    private String languagePreference = "en";
+
+    public String getThemePreference() {
+        return themePreference != null ? themePreference : "light";
+    }
+
+    public String getLanguagePreference() {
+        return languagePreference != null ? languagePreference : "en";
+    }
 }

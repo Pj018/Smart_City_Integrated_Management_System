@@ -15,24 +15,28 @@ import java.util.List;
 
 @Repository
 public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
-    Page<Complaint> findByCitizen(User citizen, Pageable pageable);
+        Page<Complaint> findByCitizen(User citizen, Pageable pageable);
 
-    Page<Complaint> findByCitizenAndStatus(User citizen, ComplaintStatus status, Pageable pageable);
+        Page<Complaint> findByCitizenAndStatus(User citizen, ComplaintStatus status, Pageable pageable);
 
-    @Query("SELECT c FROM Complaint c WHERE c.citizen = :citizen AND (LOWER(c.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(c.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
-    Page<Complaint> searchByCitizenAndKeyword(@Param("citizen") User citizen, @Param("keyword") String keyword,
-            Pageable pageable);
+        @Query("SELECT c FROM Complaint c WHERE c.citizen = :citizen AND (LOWER(c.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(c.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+        Page<Complaint> searchByCitizenAndKeyword(@Param("citizen") User citizen, @Param("keyword") String keyword,
+                        Pageable pageable);
 
-    @Query("SELECT c FROM Complaint c WHERE c.citizen = :citizen AND c.status = :status AND (LOWER(c.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(c.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
-    Page<Complaint> searchByCitizenAndStatusAndKeyword(@Param("citizen") User citizen,
-            @Param("status") ComplaintStatus status, @Param("keyword") String keyword, Pageable pageable);
+        @Query("SELECT c FROM Complaint c WHERE c.citizen = :citizen AND c.status = :status AND (LOWER(c.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(c.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+        Page<Complaint> searchByCitizenAndStatusAndKeyword(@Param("citizen") User citizen,
+                        @Param("status") ComplaintStatus status, @Param("keyword") String keyword, Pageable pageable);
 
-    Page<Complaint> findByStaff(User staff, Pageable pageable);
+        Page<Complaint> findByStaff(User staff, Pageable pageable);
 
-    // For admin to monitor
-    List<Complaint> findByDepartment(Department department);
+        // For admin to monitor
+        List<Complaint> findByDepartment(Department department);
 
-    List<Complaint> findByStatus(ComplaintStatus status);
+        List<Complaint> findByStatus(ComplaintStatus status);
 
-    long countByStatus(ComplaintStatus status);
+        long countByStatus(ComplaintStatus status);
+
+        long countByCitizen(User citizen);
+
+        long countByCitizenAndStatus(User citizen, ComplaintStatus status);
 }

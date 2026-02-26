@@ -25,7 +25,7 @@ public class AdminController {
 
     @Autowired
     private UserService userService;
-
+  
     @Autowired
     private NotificationService notificationService;
 
@@ -47,25 +47,6 @@ public class AdminController {
         long resolved = allComplaints.stream().filter(c -> c.getStatus().name().equals("COMPLETED")).count();
         model.addAttribute("pendingCount", pending);
         model.addAttribute("resolvedCount", resolved);
-
-        // Predictive Alert Section: Department with high frequency
-        java.util.Map<com.example.entity.Department, Long> deptCount = allComplaints.stream()
-                .collect(Collectors.groupingBy(Complaint::getDepartment, Collectors.counting()));
-
-        com.example.entity.Department highFreqDept = null;
-        long max = 0;
-        for (java.util.Map.Entry<com.example.entity.Department, Long> entry : deptCount.entrySet()) {
-            if (entry.getValue() > max) {
-                max = entry.getValue();
-                highFreqDept = entry.getKey();
-            }
-        }
-        if (highFreqDept != null && max > 0) {
-            model.addAttribute("predictiveAlert", highFreqDept + " currently has the highest volume (" + max
-                    + " issues). Consider assigning more staff or priority to this department.");
-        } else {
-            model.addAttribute("predictiveAlert", "Complaint volume is stable across all departments.");
-        }
 
         return "admin_dashboard";
     }

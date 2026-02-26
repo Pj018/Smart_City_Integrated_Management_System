@@ -59,6 +59,26 @@ public class UserService {
         userRepository.save(user);
     }
 
+    public void updateNotificationPreferences(Long id, boolean emailNotifications, boolean smsNotifications) {
+        User user = userRepository.findById(id).orElseThrow();
+        user.setEmailNotifications(emailNotifications);
+        user.setSmsNotifications(smsNotifications);
+        userRepository.save(user);
+    }
+
+    public void updateThemeAndLanguagePreferences(Long id, String theme, String language) {
+        User user = userRepository.findById(id).orElseThrow();
+        user.setThemePreference(theme);
+        user.setLanguagePreference(language);
+        userRepository.save(user);
+    }
+
+    public void updateUserProfilePhoto(Long id, String photoPath) {
+        User user = userRepository.findById(id).orElseThrow();
+        user.setProfilePhoto(photoPath);
+        userRepository.save(user);
+    }
+
     public boolean updatePassword(Long id, String oldPassword, String newPassword) {
         User user = userRepository.findById(id).orElseThrow();
         if (passwordEncoder.matches(oldPassword, user.getPassword())) {

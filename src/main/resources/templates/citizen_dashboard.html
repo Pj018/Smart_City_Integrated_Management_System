@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org"
+    th:attr="data-bs-theme=${citizen.themePreference == 'dark' ? 'dark' : 'light'}">
 
 <head>
     <meta charset="UTF-8">
@@ -31,6 +32,10 @@
             background-color: #2c3e50;
         }
 
+        .dropdown-toggle-no-caret::after {
+            display: none !important;
+        }
+
         .badge-digital {
             background: linear-gradient(45deg, #FFD700, #FFA500);
             color: #000;
@@ -46,6 +51,16 @@
         <!-- Sidebar -->
         <div class="sidebar col-md-2 d-none d-md-block">
             <h4 class="text-center mb-4">Smart City</h4>
+
+            <div class="text-center mb-4">
+                <img th:if="${citizen.profilePhoto != null}" th:src="${citizen.profilePhoto}"
+                    class="rounded-circle border border-2 border-white skeleton-img"
+                    style="width: 80px; height: 80px; object-fit: cover;" alt="Profile Photo">
+                <i th:unless="${citizen.profilePhoto != null}"
+                    class="bi bi-person-circle display-4 text-white opacity-50"></i>
+                <div class="mt-2 fw-bold text-white" th:text="${citizen.name}">Citizen Name</div>
+            </div>
+
             <a href="/citizen/dashboard"><i class="bi bi-house-door"></i> Dashboard</a>
             <a href="/citizen/complaint/new"><i class="bi bi-plus-circle"></i> Raise Complaint</a>
             <a href="#" data-bs-toggle="modal" data-bs-target="#profileModal"><i class="bi bi-person"></i> Edit Profile
@@ -59,9 +74,92 @@
         <!-- Main Content -->
         <div class="col-md-10 p-4 bg-light">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>Welcome, <span th:text="${citizen.name}">Citizen</span>!</h2>
-                <div th:if="${citizen.points >= 100}" class="badge-digital ms-3 shadow">
-                    <i class="bi bi-award-fill"></i> Verified Citizen Badge
+                <div class="d-flex align-items-center">
+                    <h2 class="mb-0">Welcome, <span th:text="${citizen.name}">Citizen</span>!</h2>
+                    <div th:if="${citizen.points >= 100}" class="badge-digital ms-3 shadow">
+                        <i class="bi bi-award-fill"></i> Verified Citizen Badge
+                    </div>
+                </div>
+
+                <!-- Notification Bell Dropdown -->
+                <div class="dropdown">
+                    <a href="#" class="text-dark text-decoration-none dropdown-toggle-no-caret position-relative"
+                        id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-bell fs-4"
+                            th:classappend="${#lists.isEmpty(notifications) ? 'text-secondary' : 'text-primary'}"></i>
+                        <!-- Unread red dot -->
+                        <span th:if="${not #lists.isEmpty(notifications) and notifications.?[read == false].size() > 0}"
+                            class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"
+                            style="width: 10px; height: 10px; margin-top: 5px; margin-left: -5px;">
+                            <span class="visually-hidden">New alerts</span>
+                        </span>
+                    </a>
+
+                    <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3"
+                        aria-labelledby="notificationDropdown" style="width: 350px; padding: 0;">
+                        <div
+                            class="d-flex justify-content-between align-items-center bg-white border-bottom p-3 rounded-top-3">
+                            <strong class="text-dark fs-6"><i
+                                    class="bi bi-bell-fill me-2 text-primary"></i>Notifications</strong>
+                            <form th:if="${not #lists.isEmpty(notifications)}" action="/citizen/notifications/read-all"
+                                method="post" class="m-0">
+                                <button type="submit"
+                                    class="btn btn-sm btn-link text-decoration-none p-0 text-dark opacity-75 fw-bold"
+                                    style="font-size: 0.8rem;"><i class="bi bi-check2-all"></i> Mark All Read</button>
+                            </form>
+                        </div>
+                        <div class="overflow-auto bg-white" style="max-height: 350px;">
+                            <ul class="list-group list-group-flush mb-0">
+                                <!-- Notifications loop -->
+                                <li class="list-group-item list-group-item-action p-3 border-bottom"
+                                    th:each="n, iterStat : ${notifications}" th:if="${iterStat.index < 5}"
+                                    th:style="${!n.read ? 'background-color: #f8f9fa;' : 'background-color: #ffffff;'}">
+                                    <!-- Unread UI -->
+                                    <div class="d-flex justify-content-between align-items-start" th:if="${!n.read}">
+                                        <div>
+                                            <div class="fw-bold text-dark mb-1" style="font-size: 0.85rem;">
+                                                <span class="d-inline-block bg-danger rounded-circle me-1"
+                                                    style="width: 6px; height: 6px; margin-bottom: 2px;"></span>
+                                                System Alert
+                                            </div>
+                                            <div class="text-dark small fw-bold" th:text="${n.message}"></div>
+                                            <small class="text-muted" style="font-size: 0.75rem;"
+                                                th:text="${#temporals.format(n.timestamp, 'dd-MMM, HH:mm')}"></small>
+                                        </div>
+                                        <form th:action="@{/citizen/notifications/read/{id}(id=${n.id})}" method="post"
+                                            class="m-0 ms-2">
+                                            <button type="submit"
+                                                class="btn btn-sm btn-light text-success p-1 rounded-circle flex-shrink-0"
+                                                title="Mark as read"><i class="bi bi-check2"></i></button>
+                                        </form>
+                                    </div>
+                                    <!-- Read UI -->
+                                    <div class="d-flex justify-content-between align-items-start opacity-75"
+                                        th:if="${n.read}">
+                                        <div>
+                                            <div class="text-muted fw-semibold mb-1" style="font-size: 0.85rem;"><i
+                                                    class="bi bi-info-circle text-secondary me-1"></i> Update</div>
+                                            <div class="text-secondary small text-decoration-none"
+                                                th:text="${n.message}"></div>
+                                            <small class="text-muted" style="font-size: 0.75rem;"
+                                                th:text="${#temporals.format(n.timestamp, 'dd-MMM, HH:mm')}"></small>
+                                        </div>
+                                    </div>
+                                </li>
+
+                                <li class="list-group-item text-center text-muted p-4 border-0"
+                                    th:if="${#lists.isEmpty(notifications)}">
+                                    <i class="bi bi-bell-slash fs-3 d-block mb-2 text-secondary opacity-50"></i>
+                                    <span class="small">No new notifications.</span>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="text-center p-2 bg-light border-top rounded-bottom-3"
+                            th:if="${not #lists.isEmpty(notifications)}">
+                            <a href="#" class="text-decoration-none text-primary small fw-bold">View All
+                                Notifications</a>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -81,58 +179,60 @@
 
             <!-- Stats Cards -->
             <div class="row mb-4">
-                <div class="col-md-4">
-                    <div class="card text-white bg-primary mb-3 shadow">
-                        <div class="card-body">
-                            <h5 class="card-title">Reward Points</h5>
-                            <p class="card-text fs-2" th:text="${citizen.points}">0</p>
+                <div class="col-md-6 col-lg-3">
+                    <div class="card text-white bg-primary mb-3 shadow rounded-4 border-0">
+                        <div class="card-body d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title text-opacity-75 text-white mb-1">Reward Points</h6>
+                                <h2 class="card-text fw-bold mb-0" th:text="${citizen.points}">0</h2>
+                            </div>
+                            <div
+                                class="bg-white bg-opacity-25 rounded-circle p-3 d-flex align-items-center justify-content-center">
+                                <i class="bi bi-award-fill fs-3"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-8">
-                    <div class="card mb-3 shadow">
-                        <div
-                            class="card-header bg-warning text-dark fw-bold d-flex justify-content-between align-items-center">
-                            <span>Recent Notifications</span>
-                            <form th:if="${not #lists.isEmpty(notifications)}" action="/citizen/notifications/read-all"
-                                method="post" class="m-0">
-                                <button type="submit" class="btn btn-sm btn-outline-dark" style="font-size: 0.75rem;"><i
-                                        class="bi bi-check2-all"></i> Mark All Read</button>
-                            </form>
+                <div class="col-md-6 col-lg-3">
+                    <div class="card text-white bg-info mb-3 shadow rounded-4 border-0">
+                        <div class="card-body d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title text-opacity-75 text-white mb-1">Total Filed</h6>
+                                <h2 class="card-text fw-bold mb-0" th:text="${totalComplaints}">0</h2>
+                            </div>
+                            <div
+                                class="bg-white bg-opacity-25 rounded-circle p-3 d-flex align-items-center justify-content-center">
+                                <i class="bi bi-file-earmark-text fs-3"></i>
+                            </div>
                         </div>
-                        <ul class="list-group list-group-flush" style="max-height: 120px; overflow-y: auto;">
-                            <!-- Show Unread items boldly -->
-                            <li class="list-group-item d-flex justify-content-between align-items-center"
-                                th:each="n : ${notifications}" th:if="${!n.read}">
-                                <span>
-                                    <i class="bi bi-bell-fill text-danger me-2"></i>
-                                    <span class="fw-bold text-dark" th:text="${n.message}"></span>
-                                    <small class="text-muted ms-2"
-                                        th:text="${'(' + #temporals.format(n.timestamp, 'dd-MMM HH:mm') + ')'}"></small>
-                                </span>
-                                <form th:action="@{/citizen/notifications/read/{id}(id=${n.id})}" method="post"
-                                    class="m-0">
-                                    <button type="submit" class="btn btn-sm btn-light text-success"
-                                        title="Mark as read"><i class="bi bi-check-circle"></i></button>
-                                </form>
-                            </li>
-
-                            <!-- Show Read items faded and struck through -->
-                            <li class="list-group-item d-flex justify-content-between align-items-center bg-light"
-                                th:each="n : ${notifications}" th:if="${n.read}">
-                                <span>
-                                    <i class="bi bi-bell text-secondary me-2"></i>
-                                    <span class="text-secondary text-decoration-line-through"
-                                        th:text="${n.message}"></span>
-                                    <small class="text-muted ms-2"
-                                        th:text="${'(' + #temporals.format(n.timestamp, 'dd-MMM HH:mm') + ')'}"></small>
-                                </span>
-                            </li>
-
-                            <li class="list-group-item text-muted" th:if="${#lists.isEmpty(notifications)}">
-                                <i class="bi bi-info-circle me-1"></i> No new notifications.
-                            </li>
-                        </ul>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <div class="card text-dark bg-warning mb-3 shadow rounded-4 border-0">
+                        <div class="card-body d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title text-opacity-75 text-dark mb-1">Pending Issues</h6>
+                                <h2 class="card-text fw-bold mb-0" th:text="${pendingComplaints}">0</h2>
+                            </div>
+                            <div
+                                class="bg-dark bg-opacity-10 rounded-circle p-3 d-flex align-items-center justify-content-center">
+                                <i class="bi bi-hourglass-split fs-3"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <div class="card text-white bg-success mb-3 shadow rounded-4 border-0">
+                        <div class="card-body d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title text-opacity-75 text-white mb-1">Resolved Issues</h6>
+                                <h2 class="card-text fw-bold mb-0" th:text="${resolvedComplaints}">0</h2>
+                            </div>
+                            <div
+                                class="bg-white bg-opacity-25 rounded-circle p-3 d-flex align-items-center justify-content-center">
+                                <i class="bi bi-check-circle fs-3 text-white"></i>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -162,12 +262,20 @@
                                 </option>
                             </select>
                         </form>
+                        <button type="button" class="btn btn-sm btn-outline-secondary d-none d-md-block"
+                            onclick="window.print()">
+                            <i class="bi bi-printer"></i> Print
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-dark d-none d-md-block"
+                            onclick="exportTableToCSV('my_complaints.csv')">
+                            <i class="bi bi-filetype-csv"></i> Export CSV
+                        </button>
                         <a href="/citizen/complaint/new" class="btn btn-sm btn-success"><i class="bi bi-plus-lg"></i>
                             New Complaint</a>
                     </div>
                 </div>
                 <div class="card-body">
-                    <table class="table table-hover">
+                    <table class="table table-hover" id="complaintsTable">
                         <thead class="table-light">
                             <tr>
                                 <th>ID</th>
@@ -253,12 +361,21 @@
     <div class="modal fade" id="profileModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form action="/citizen/profile/update" method="post">
+                <form action="/citizen/profile/update" method="post" enctype="multipart/form-data">
                     <div class="modal-header bg-primary text-white">
                         <h5 class="modal-title">My Profile</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
+                        <div class="mb-3 text-center">
+                            <img th:if="${citizen.profilePhoto != null}" th:src="${citizen.profilePhoto}"
+                                class="rounded-circle border mb-2"
+                                style="width: 100px; height: 100px; object-fit: cover;" alt="Profile Photo">
+                            <i th:unless="${citizen.profilePhoto != null}"
+                                class="bi bi-person-circle display-1 text-secondary"></i>
+                            <input type="file" name="profilePhoto" class="form-control mt-2" accept="image/*">
+                            <small class="text-muted">Upload a new profile photo (optional)</small>
+                        </div>
                         <div class="mb-3">
                             <label class="form-label">Full Name</label>
                             <input type="text" name="name" class="form-control" th:value="${citizen.name}" required>
@@ -281,33 +398,99 @@
         </div>
     </div>
 
-    <!-- Settings (Change Password) Modal -->
+    <!-- Settings Modal -->
     <div class="modal fade" id="settingsModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form action="/citizen/settings/password" method="post">
-                    <div class="modal-header bg-dark text-white">
-                        <h5 class="modal-title">Account Settings</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title">Account Settings</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <!-- Notification Preferences Section -->
+                    <div class="p-3 border-bottom">
+                        <h6 class="mb-3 text-primary"><i class="bi bi-bell-fill"></i> Notification Preferences</h6>
+                        <form action="/citizen/settings/notifications" method="post">
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="emailNotifications"
+                                    name="emailNotifications" th:checked="${citizen.emailNotifications}">
+                                <label class="form-check-label" for="emailNotifications">
+                                    <strong>Email Alerts</strong><br>
+                                    <small class="text-muted">Receive major updates via email</small>
+                                </label>
+                            </div>
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="smsNotifications"
+                                    name="smsNotifications" th:checked="${citizen.smsNotifications}">
+                                <label class="form-check-label" for="smsNotifications">
+                                    <strong>SMS Text Alerts</strong><br>
+                                    <small class="text-muted">Receive instant updates on your phone</small>
+                                </label>
+                            </div>
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-sm btn-primary">Save Preferences</button>
+                            </div>
+                        </form>
                     </div>
-                    <div class="modal-body">
-                        <h6 class="mb-3">Change Password</h6>
-                        <div class="mb-3">
-                            <label class="form-label">Current Password</label>
-                            <input type="password" name="oldPassword" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">New Password</label>
-                            <input type="password" name="newPassword" class="form-control" required minlength="6">
-                        </div>
+
+                    <!-- Visual Theme & Localization Section -->
+                    <div class="p-3 border-bottom">
+                        <h6 class="mb-3 text-success"><i class="bi bi-palette-fill"></i> Theme & Language</h6>
+                        <form action="/citizen/settings/preferences" method="post">
+                            <div class="mb-3">
+                                <label class="form-label">Theme Mode</label>
+                                <select name="themePreference" class="form-select">
+                                    <option value="light" th:selected="${citizen.themePreference == 'light'}">Light
+                                        Mode
+                                    </option>
+                                    <option value="dark" th:selected="${citizen.themePreference == 'dark'}">Dark
+                                        Mode
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Display Language</label>
+                                <select name="languagePreference" class="form-select">
+                                    <option value="en" th:selected="${citizen.languagePreference == 'en'}">English
+                                        (US)
+                                    </option>
+                                    <option value="hi" th:selected="${citizen.languagePreference == 'hi'}">Hindi
+                                        (भारत)
+                                    </option>
+                                    <option value="es" th:selected="${citizen.languagePreference == 'es'}">Spanish
+                                        (Español)</option>
+                                </select>
+                            </div>
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-sm btn-success">Apply Visual Changes</button>
+                            </div>
+                        </form>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <button type="submit" class="btn btn-dark">Update Password</button>
+
+                    <!-- Change Password Section -->
+                    <div class="p-3">
+                        <h6 class="mb-3 text-danger"><i class="bi bi-shield-lock-fill"></i> Security</h6>
+                        <form action="/citizen/settings/password" method="post">
+                            <div class="mb-3">
+                                <label class="form-label">Current Password</label>
+                                <input type="password" name="oldPassword" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">New Password</label>
+                                <input type="password" name="newPassword" class="form-control" required minlength="6">
+                            </div>
                     </div>
-                </form>
+                    <div class="text-end mt-3">
+                        <button type="submit" class="btn btn-sm btn-dark">Update Password</button>
+                    </div>
+                    </form>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
+    </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -373,6 +556,33 @@
             map.fitBounds(markers, { padding: [50, 50] });
         } else if (markers.length === 1) {
             map.setZoom(13); // Closer zoom if only 1 complaint
+        }
+
+        // CSV Export Utility
+        function exportTableToCSV(filename) {
+            var csv = [];
+            var rows = document.querySelectorAll("#complaintsTable tr");
+
+            for (var i = 0; i < rows.length; i++) {
+                var row = [], cols = rows[i].querySelectorAll("td, th");
+
+                // Exclude last column (Action button/View details)
+                for (var j = 0; j < cols.length - 1; j++) {
+                    var data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, "").trim();
+                    data = data.replace(/"/g, '""'); // Escape double quotes
+                    row.push('"' + data + '"');     // Quote all fields safely
+                }
+                csv.push(row.join(","));
+            }
+
+            var csvFile = new Blob([csv.join("\n")], { type: "text/csv" });
+            var downloadLink = document.createElement("a");
+            downloadLink.download = filename;
+            downloadLink.href = window.URL.createObjectURL(csvFile);
+            downloadLink.style.display = "none";
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
         }
     </script>
 </body>
